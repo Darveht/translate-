@@ -103,9 +103,6 @@ class LiveTranslator {
         if (this.recognition.serviceURI) {
             this.recognition.serviceURI = null;
         }
-        if (this.recognition.grammars) {
-            this.recognition.grammars = null;
-        }
 
         this.recognition.onstart = () => {
             this.spanishText.classList.add('listening');
@@ -143,8 +140,8 @@ class LiveTranslator {
                         clearTimeout(this.silenceTimer);
                     }
                     this.pauseListeningAndTranslate(finalTranscript);
-                } else if (currentText.trim().length > 3) {
-                    // Para texto intermedio, esperar menos
+                } else if (currentText.trim().length > 2) {
+                    // Para texto intermedio, respuesta más rápida
                     if (this.silenceTimer) {
                         clearTimeout(this.silenceTimer);
                     }
@@ -152,7 +149,7 @@ class LiveTranslator {
                         if (!this.isSpeaking && currentText.trim()) {
                             this.pauseListeningAndTranslate(currentText);
                         }
-                    }, 1000);
+                    }, 500); // Reducido de 1000ms a 500ms
                 }
             }
         };
@@ -236,7 +233,13 @@ class LiveTranslator {
                 translatedText = await this.simpleTranslateToLanguage(text, targetLang);
             }
             
+            // Animación de traducción
+            this.englishText.classList.add('translating');
             this.englishText.textContent = translatedText;
+            
+            setTimeout(() => {
+                this.englishText.classList.remove('translating');
+            }, 1500);
             
             // Hablar en el idioma seleccionado
             await this.speakTranslation(translatedText, text);
@@ -266,7 +269,7 @@ class LiveTranslator {
         this.isWaitingToSpeak = false;
         
         if (this.isRecording) {
-            setTimeout(() => this.restartRecognition(), 1000);
+            setTimeout(() => this.restartRecognition(), 300); // Reducido de 1000ms a 300ms
         }
     }
 
@@ -285,28 +288,71 @@ class LiveTranslator {
             if ('speechSynthesis' in window) {
                 speechSynthesis.cancel();
                 
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = this.currentTargetLanguage;
-                utterance.rate = 0.8;
-                utterance.pitch = 1.0;
-                utterance.volume = 0.9;
+                // Esperar a que las voces estén disponibles
+                const speakText = () => {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = this.currentTargetLanguage;
+                    utterance.rate = 0.9; // Aumentado para mayor naturalidad
+                    utterance.pitch = 1.1; // Ligeramente más alto
+                    utterance.volume = 1.0; // Volumen máximo
+                    
+                    // Buscar la mejor voz para el idioma seleccionado
+                    const voices = speechSynthesis.getVoices();
+                    let targetVoice = voices.find(voice => 
+                        voice.lang === this.currentTargetLanguage
+                    );
+                    
+                    if (!targetVoice) {
+                        targetVoice = voices.find(voice => 
+                            voice.lang.startsWith(this.currentTargetLanguage.split('-')[0])
+                        );
+                    }
+                    
+                    // Preferir voces premium/mejoradas
+                    if (!targetVoice) {
+                        const premiumVoice = voices.find(voice => 
+                            voice.name.includes('Premium') || 
+                            voice.name.includes('Enhanced') ||
+                            voice.name.includes('Neural')
+                        );
+                        if (premiumVoice) targetVoice = premiumVoice;
+                    }
+                    
+                    if (targetVoice) {
+                        utterance.voice = targetVoice;
+                        console.log(`Usando voz: ${targetVoice.name} para ${this.currentTargetLanguage}`);
+                    } else {
+                        console.log(`Usando voz por defecto para ${this.currentTargetLanguage}`);
+                    }
+                    
+                    utterance.onstart = () => {
+                        console.log('Iniciando síntesis de voz');
+                    };
+                    
+                    utterance.onend = () => {
+                        console.log('Síntesis de voz completada');
+                        resolve();
+                    };
+                    
+                    utterance.onerror = (error) => {
+                        console.error('Error en síntesis de voz:', error);
+                        resolve();
+                    };
+                    
+                    speechSynthesis.speak(utterance);
+                };
                 
-                // Buscar la mejor voz para el idioma seleccionado
-                const voices = speechSynthesis.getVoices();
-                const targetVoice = voices.find(voice => 
-                    voice.lang === this.currentTargetLanguage || 
-                    voice.lang.startsWith(this.currentTargetLanguage.split('-')[0])
-                );
-                
-                if (targetVoice) {
-                    utterance.voice = targetVoice;
-                    console.log(`Usando voz: ${targetVoice.name} para ${this.currentTargetLanguage}`);
+                // Si no hay voces disponibles, esperar un poco
+                if (speechSynthesis.getVoices().length === 0) {
+                    speechSynthesis.onvoiceschanged = () => {
+                        speechSynthesis.onvoiceschanged = null;
+                        speakText();
+                    };
+                    // Timeout de seguridad
+                    setTimeout(speakText, 100);
+                } else {
+                    speakText();
                 }
-                
-                utterance.onend = resolve;
-                utterance.onerror = resolve;
-                
-                speechSynthesis.speak(utterance);
             } else {
                 resolve();
             }
@@ -405,6 +451,12 @@ class LiveTranslator {
             this.currentLanguageName = this.languageConfig[this.currentTargetLanguage]?.name || 'Idioma';
             console.log(`Idioma cambiado a: ${this.currentLanguageName}`);
             
+            // Animación de cambio de idioma
+            this.englishText.classList.add('language-change-wave');
+            setTimeout(() => {
+                this.englishText.classList.remove('language-change-wave');
+            }, 800);
+            
             // Actualizar placeholder del texto traducido
             this.updateLanguageDisplay();
         });
@@ -424,13 +476,14 @@ class LiveTranslator {
                 const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
                 
                 // Ajustar sensibilidad visual basada en el nivel de audio
-                if (average > 15) { // Umbral aún más bajo para detectar voz lejana
-                    this.spanishText.style.transform = `scale(${1 + average / 400})`;
-                    this.spanishText.style.opacity = Math.min(1, 0.6 + average / 150);
-                    
-                    } else {
+                if (average > 8) { // Umbral muy bajo para detectar voz suave
+                    this.spanishText.style.transform = `scale(${1 + average / 300})`;
+                    this.spanishText.style.opacity = Math.min(1, 0.7 + average / 100);
+                    this.spanishText.classList.add('voice-detected');
+                } else {
                     this.spanishText.style.transform = 'scale(1)';
                     this.spanishText.style.opacity = '1';
+                    this.spanishText.classList.remove('voice-detected');
                 }
             }
             
@@ -454,7 +507,9 @@ class LiveTranslator {
         this.isWaitingToSpeak = false;
         this.recordButton.classList.add('recording');
         this.spanishText.textContent = 'Escuchando...';
+        this.spanishText.classList.add('float-animation');
         this.englishText.textContent = `Detectando para ${this.currentLanguageName}...`;
+        this.englishText.classList.add('typing-effect');
         
         // Reiniciar audio context si está suspendido
         if (this.audioContext && this.audioContext.state === 'suspended') {
@@ -495,6 +550,10 @@ class LiveTranslator {
         this.englishText.textContent = `Traducirá a ${this.currentLanguageName}...`;
         this.spanishText.style.transform = 'scale(1)';
         this.spanishText.style.opacity = '1';
+        
+        // Limpiar todas las animaciones
+        this.spanishText.classList.remove('float-animation', 'voice-detected', 'typing-effect');
+        this.englishText.classList.remove('translating', 'typing-effect', 'language-change-wave');
     }
 }
 
