@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traductor en Vivo</title>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <div class="camera-container">
+        <video id="cameraVideo" autoplay muted playsinline></video>
+        
+        <!-- Sign Language 3D Avatar -->
+        <div class="sign-language-display" id="signLanguageDisplay">
+            <div class="sign-language-title">Intérprete Virtual</div>
+            <canvas id="avatarCanvas" width="180" height="130"></canvas>
+            <div class="sign-language-word" id="signLanguageWord">Listo</div>
+        </div>
+        
+        <!-- Language Selector -->
+        <div class="language-selector" id="languageSelector">
+            <select id="targetLanguage">
+                <option value="zh-CN">🇨🇳 Chino (Mandarín)</option>
+                <option value="en-US">🇺🇸 Inglés</option>
+                <option value="fr-FR">🇫🇷 Francés</option>
+                <option value="de-DE">🇩🇪 Alemán</option>
+                <option value="it-IT">🇮🇹 Italiano</option>
+                <option value="pt-BR">🇧🇷 Portugués</option>
+                <option value="ja-JP">🇯🇵 Japonés</option>
+                <option value="ko-KR">🇰🇷 Coreano</option>
+                <option value="ru-RU">🇷🇺 Ruso</option>
+                <option value="ar-SA">🇸🇦 Árabe</option>
+            </select>
+        </div>
+        
+        <div class="camera-view">
+            <div class="translation-display"></div>
+                <div class="spanish-text" id="spanishText">Presiona el botón para comenzar...</div>
+                <div class="english-text" id="englishText">按下按钮开始...</div>
+            </div>
+            
+            <div class="controls">
+                <button class="record-button" id="recordButton">
+                    <div class="record-circle"></div>
+                </button>
+                <div class="status" id="status">Listo para traducir</div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
