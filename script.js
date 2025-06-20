@@ -16,12 +16,12 @@ class LiveTranslator {
         this.lastSpeechTime = 0;
         this.currentTargetLanguage = 'es-ES';
         this.currentLanguageName = 'Español';
-        
+
         this.initializeCamera();
         this.initializeSpeechRecognition();
         this.initializeEventListeners();
         this.initializeLanguageSupport();
-        
+
         // Configurar idioma inicial
         this.updateLanguageDisplay();
     }
@@ -50,7 +50,7 @@ class LiveTranslator {
             });
             this.cameraVideo.srcObject = stream;
             this.mediaStream = stream; // Guardar referencia para Speech-to-Speech
-            
+
             // Configurar el audio context para máxima sensibilidad y calidad
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.mediaStreamSource = this.audioContext.createMediaStreamSource(stream);
@@ -58,23 +58,23 @@ class LiveTranslator {
             this.analyser.fftSize = 2048;
             this.analyser.smoothingTimeConstant = 0.3;
             this.mediaStreamSource.connect(this.analyser);
-            
+
         } catch (error) {
             console.error('Error al acceder a la cámara:', error);
             this.status.textContent = 'Error: No se puede acceder a la cámara';
         }
     }
 
-    
+
 
     initializeLanguageSupport() {
         // ElevenLabs API configuration
         this.elevenLabsApiKey = 'sk_90c2b196908f9793568de840b935fc94f542ed50abde7385';
-        
+
         // Cache de audio para reducir llamadas a API
         this.audioCache = new Map();
         this.lastTranslation = '';
-        
+
         // Voces específicas y optimizadas por idioma para máxima naturalidad
         this.languageConfig = {
             'es-ES': { 
@@ -135,7 +135,7 @@ class LiveTranslator {
         };
     }
 
-    
+
 
     initializeSpeechRecognition() {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -145,12 +145,12 @@ class LiveTranslator {
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         this.recognition = new SpeechRecognition();
-        
+
         this.recognition.continuous = true;
         this.recognition.interimResults = true;
         this.recognition.lang = 'es-ES';
         this.recognition.maxAlternatives = 1;
-        
+
         // Configuración optimizada para mejor detección
         if (this.recognition.serviceURI) {
             this.recognition.serviceURI = null;
@@ -171,7 +171,7 @@ class LiveTranslator {
 
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const transcript = event.results[i][0].transcript;
-                
+
                 if (event.results[i].isFinal) {
                     finalTranscript += transcript;
                 } else {
@@ -183,9 +183,9 @@ class LiveTranslator {
             if (currentText.trim()) {
                 this.spanishText.textContent = currentText;
                 this.lastSpeechTime = Date.now();
-                
-                
-                
+
+
+
                 // Traducir inmediatamente con texto final
                 if (finalTranscript.trim()) {
                     if (this.silenceTimer) {
@@ -193,15 +193,28 @@ class LiveTranslator {
                     }
                     this.pauseListeningAndTranslate(finalTranscript);
                 } else if (currentText.trim().length > 2) {
-                    // Para texto intermedio, respuesta ultra-rápida
-                    if (this.silenceTimer) {
-                        clearTimeout(this.silenceTimer);
+                    // Para texto intermedio, esperar más tiempo para frases largas
+                if (this.silenceTimer) {
+                    clearTimeout(this.silenceTimer);
+                }
+
+                // Permitir frases más largas - esperar más tiempo según la longitud
+                const minWords = 5; // Mínimo 5 palabras
+                const wordCount = currentText.trim().split(' ').length;
+                let waitTime = 2000; // 2 segundos base
+
+                // Aumentar tiempo de espera para frases largas
+                if (wordCount >= minWords) {
+                    waitTime = Math.min(5000, 2000 + (wordCount * 100)); // Hasta 5 segundos máximo
+                } else {
+                    waitTime = 3000; // 3 segundos para frases cortas
+                }
+
+                this.silenceTimer = setTimeout(() => {
+                    if (!this.isSpeaking && currentText.trim() && wordCount >= minWords) {
+                        this.pauseListeningAndTranslate(currentText);
                     }
-                    this.silenceTimer = setTimeout(() => {
-                        if (!this.isSpeaking && currentText.trim()) {
-                            this.pauseListeningAndTranslate(currentText);
-                        }
-                    }, 200); // Reducido a 200ms para respuesta inmediata
+                }, waitTime);
                 }
             }
         };
@@ -215,7 +228,7 @@ class LiveTranslator {
                 }
                 return;
             }
-            
+
             if (event.error !== 'aborted' && event.error !== 'network') {
                 console.error('Error de reconocimiento:', event.error);
                 this.status.textContent = `Error: ${event.error}`;
@@ -250,11 +263,11 @@ class LiveTranslator {
 
     async pauseListeningAndTranslate(text) {
         if (this.isSpeaking || this.isWaitingToSpeak) return;
-        
+
         // Pausar el reconocimiento
         this.isWaitingToSpeak = true;
         this.recognition.stop();
-        
+
         // Para Speech-to-Speech, necesitamos el audio original y la traducción
         this.lastSpokenSpanishText = text;
         await this.translateText(text);
@@ -264,38 +277,38 @@ class LiveTranslator {
         try {
             const targetLang = this.currentTargetLanguage;
             const langPair = `es|${targetLang.split('-')[0]}`;
-            
+
             // Usar múltiples APIs de traducción para mejor precisión
             let translatedText = '';
-            
+
             try {
                 // API primaria
                 const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`);
                 const data = await response.json();
-                
+
                 if (data.responseStatus === 200) {
                     translatedText = data.responseData.translatedText;
                 }
             } catch (apiError) {
                 console.log('API primaria falló, usando respaldo...');
             }
-            
+
             // Si falla, usar traducción local
             if (!translatedText) {
                 translatedText = await this.simpleTranslateToLanguage(text, targetLang);
             }
-            
+
             // Animación de traducción
             this.englishText.classList.add('translating');
             this.englishText.textContent = translatedText;
-            
+
             setTimeout(() => {
                 this.englishText.classList.remove('translating');
             }, 1500);
-            
+
             // Hablar en el idioma seleccionado
             await this.speakTranslation(translatedText, text);
-            
+
         } catch (error) {
             console.error('Error de traducción:', error);
             const translated = await this.simpleTranslateToLanguage(text, this.currentTargetLanguage);
@@ -306,20 +319,20 @@ class LiveTranslator {
 
     async speakTranslation(translatedText, originalText) {
         if (!translatedText.trim() || this.isSpeaking) return;
-        
+
         this.isSpeaking = true;
-        
+
         try {
             // Usar ElevenLabs para voces ultra-realistas
             await this.speakWithElevenLabs(translatedText);
         } catch (error) {
             console.error('Error al hablar:', error);
         }
-        
+
         // Reanudar escucha inmediatamente después de hablar
         this.isSpeaking = false;
         this.isWaitingToSpeak = false;
-        
+
         if (this.isRecording) {
             setTimeout(() => this.restartRecognition(), 100); // Reducido a 100ms
         }
@@ -331,15 +344,15 @@ class LiveTranslator {
         }
     }
 
-    
 
-    
+
+
 
     async speakWithElevenLabs(text) {
         return new Promise(async (resolve) => {
             try {
                 const voiceConfig = this.languageConfig[this.currentTargetLanguage];
-                
+
                 if (!voiceConfig) {
                     console.error('Configuración de voz no encontrada para:', this.currentTargetLanguage);
                     resolve();
@@ -348,13 +361,13 @@ class LiveTranslator {
 
                 // Crear clave de cache única
                 const cacheKey = `${this.currentTargetLanguage}-${text.toLowerCase().trim()}`;
-                
+
                 // Verificar cache para evitar llamadas duplicadas
                 if (this.audioCache.has(cacheKey)) {
                     console.log('Usando audio en cache');
                     const cachedAudioUrl = this.audioCache.get(cacheKey);
                     const audio = new Audio(cachedAudioUrl);
-                    
+
                     audio.onended = () => resolve();
                     audio.onerror = () => resolve();
                     await audio.play();
@@ -400,7 +413,7 @@ class LiveTranslator {
 
                 const audioBlob = await response.blob();
                 const audioUrl = URL.createObjectURL(audioBlob);
-                
+
                 // Guardar en cache (limitar cache a 10 elementos)
                 if (this.audioCache.size >= 10) {
                     const firstKey = this.audioCache.keys().next().value;
@@ -409,7 +422,7 @@ class LiveTranslator {
                     this.audioCache.delete(firstKey);
                 }
                 this.audioCache.set(cacheKey, audioUrl);
-                
+
                 const audio = new Audio(audioUrl);
 
                 audio.onended = () => {
@@ -454,7 +467,7 @@ class LiveTranslator {
                 'hola': 'hello', 'adiós': 'goodbye', 'gracias': 'thank you', 'por favor': 'please',
                 'sí': 'yes', 'no': 'no', 'buenos días': 'good morning', 'buenas noches': 'good night',
                 'cómo estás': 'how are you', 'muy bien': 'very good', 'bien': 'good', 'mal': 'bad',
-                'casa': 'house', 'agua': 'water', 'comida': 'food', 'familia': 'family'
+                'casa': 'house', 'water': 'water', 'comida': 'food', 'familia': 'family'
             },
             'fr-FR': {
                 'hola': 'bonjour', 'adiós': 'au revoir', 'gracias': 'merci', 'por favor': 's\'il vous plaît',
@@ -508,13 +521,13 @@ class LiveTranslator {
 
         const langTranslations = translations[targetLang] || translations['en-US'];
         const lowerText = text.toLowerCase();
-        
+
         for (const [spanish, translated] of Object.entries(langTranslations)) {
             if (lowerText.includes(spanish)) {
                 return text.toLowerCase().replace(spanish, translated);
             }
         }
-        
+
         // Solo devolver el texto traducido, sin prefijos
         return text;
     }
@@ -533,13 +546,13 @@ class LiveTranslator {
             this.currentTargetLanguage = e.target.value;
             this.currentLanguageName = this.languageConfig[this.currentTargetLanguage]?.name || 'Idioma';
             console.log(`Idioma cambiado a: ${this.currentLanguageName}`);
-            
+
             // Animación de cambio de idioma
             this.englishText.classList.add('language-change-wave');
             setTimeout(() => {
                 this.englishText.classList.remove('language-change-wave');
             }, 800);
-            
+
             // Actualizar placeholder del texto traducido
             this.updateLanguageDisplay();
         });
@@ -550,14 +563,14 @@ class LiveTranslator {
 
     startAudioLevelMonitoring() {
         if (!this.analyser) return;
-        
+
         const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-        
+
         const checkAudioLevel = () => {
             if (this.isRecording && !this.isSpeaking && !this.isWaitingToSpeak) {
                 this.analyser.getByteFrequencyData(dataArray);
                 const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-                
+
                 // Ajustar sensibilidad visual basada en el nivel de audio
                 if (average > 8) { // Umbral muy bajo para detectar voz suave
                     this.spanishText.style.transform = `scale(${1 + average / 300})`;
@@ -569,12 +582,12 @@ class LiveTranslator {
                     this.spanishText.classList.remove('voice-detected');
                 }
             }
-            
+
             if (this.isRecording) {
                 requestAnimationFrame(checkAudioLevel);
             }
         };
-        
+
         if (this.isRecording) {
             requestAnimationFrame(checkAudioLevel);
         }
@@ -593,14 +606,14 @@ class LiveTranslator {
         this.spanishText.classList.add('float-animation');
         this.englishText.textContent = `Detectando para ${this.currentLanguageName}...`;
         this.englishText.classList.add('typing-effect');
-        
+
         // Reiniciar audio context si está suspendido
         if (this.audioContext && this.audioContext.state === 'suspended') {
             this.audioContext.resume();
         }
-        
+
         this.startAudioLevelMonitoring();
-        
+
         try {
             this.recognition.start();
         } catch (error) {
@@ -615,27 +628,27 @@ class LiveTranslator {
         this.isWaitingToSpeak = false;
         this.recordButton.classList.remove('recording');
         this.spanishText.classList.remove('listening');
-        
+
         if (this.recognition) {
             this.recognition.stop();
         }
-        
+
         if (this.silenceTimer) {
             clearTimeout(this.silenceTimer);
         }
-        
+
         // Pausar cualquier audio de ElevenLabs que esté reproduciéndose
         const audioElements = document.querySelectorAll('audio');
         audioElements.forEach(audio => {
             audio.pause();
             audio.currentTime = 0;
         });
-        
+
         this.spanishText.textContent = 'Presiona el botón para comenzar...';
         this.englishText.textContent = `Traducirá a ${this.currentLanguageName}...`;
         this.spanishText.style.transform = 'scale(1)';
         this.spanishText.style.opacity = '1';
-        
+
         // Limpiar todas las animaciones
         this.spanishText.classList.remove('float-animation', 'voice-detected', 'typing-effect');
         this.englishText.classList.remove('translating', 'typing-effect', 'language-change-wave');
@@ -649,6 +662,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Voces cargadas:', speechSynthesis.getVoices().length);
         };
     }
-    
+
     new LiveTranslator();
 });
