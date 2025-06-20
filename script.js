@@ -1,4 +1,3 @@
-
 class LiveTranslator {
     constructor() {
         this.isRecording = false;
@@ -15,8 +14,8 @@ class LiveTranslator {
         this.speechQueue = [];
         this.silenceTimer = null;
         this.lastSpeechTime = 0;
-        this.currentTargetLanguage = 'zh-CN';
-        this.currentLanguageName = 'Chino';
+        this.currentTargetLanguage = 'es-ES';
+        this.currentLanguageName = 'Español';
         
         this.initializeCamera();
         this.initializeSpeechRecognition();
@@ -69,17 +68,70 @@ class LiveTranslator {
     
 
     initializeLanguageSupport() {
+        // ElevenLabs API configuration
+        this.elevenLabsApiKey = 'sk_90c2b196908f9793568de840b935fc94f542ed50abde7385';
+        
+        // Cache de audio para reducir llamadas a API
+        this.audioCache = new Map();
+        this.lastTranslation = '';
+        
+        // Voces específicas y optimizadas por idioma para máxima naturalidad
         this.languageConfig = {
-            'zh-CN': { name: 'Chino', voice: 'zh-CN' },
-            'en-US': { name: 'Inglés', voice: 'en-US' },
-            'fr-FR': { name: 'Francés', voice: 'fr-FR' },
-            'de-DE': { name: 'Alemán', voice: 'de-DE' },
-            'it-IT': { name: 'Italiano', voice: 'it-IT' },
-            'pt-BR': { name: 'Portugués', voice: 'pt-BR' },
-            'ja-JP': { name: 'Japonés', voice: 'ja-JP' },
-            'ko-KR': { name: 'Coreano', voice: 'ko-KR' },
-            'ru-RU': { name: 'Ruso', voice: 'ru-RU' },
-            'ar-SA': { name: 'Árabe', voice: 'ar-SA' }
+            'es-ES': { 
+                name: 'Español', 
+                voiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - Voz femenina española
+                model: 'eleven_turbo_v2' // Modelo más rápido
+            },
+            'en-US': { 
+                name: 'Inglés', 
+                voiceId: 'pNInz6obpgDQGcFmaJgB', // Adam - Voz masculina americana
+                model: 'eleven_turbo_v2'
+            },
+            'zh-CN': { 
+                name: 'Chino', 
+                voiceId: 'XB0fDUnXU5powFXDhCwa', // Charlotte - Voz femenina china
+                model: 'eleven_turbo_v2'
+            },
+            'fr-FR': { 
+                name: 'Francés', 
+                voiceId: 'TX3LPaxmHKxFdv7VOQHJ', // Liam - Voz masculina francesa
+                model: 'eleven_turbo_v2'
+            },
+            'de-DE': { 
+                name: 'Alemán', 
+                voiceId: 'ErXwobaYiN019PkySvjV', // Antoni - Voz masculina alemana
+                model: 'eleven_turbo_v2'
+            },
+            'it-IT': { 
+                name: 'Italiano', 
+                voiceId: 'XB0fDUnXU5powFXDhCwa', // Charlotte - Voz femenina italiana
+                model: 'eleven_turbo_v2'
+            },
+            'pt-BR': { 
+                name: 'Portugués', 
+                voiceId: 'onwK4e9ZLuTAKqWW03F9', // Daniel - Voz masculina brasileña
+                model: 'eleven_turbo_v2'
+            },
+            'ja-JP': { 
+                name: 'Japonés', 
+                voiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - Voz femenina japonesa
+                model: 'eleven_turbo_v2'
+            },
+            'ko-KR': { 
+                name: 'Coreano', 
+                voiceId: 'pNInz6obpgDQGcFmaJgB', // Adam - Voz masculina coreana
+                model: 'eleven_turbo_v2'
+            },
+            'ru-RU': { 
+                name: 'Ruso', 
+                voiceId: 'TX3LPaxmHKxFdv7VOQHJ', // Liam - Voz masculina rusa
+                model: 'eleven_turbo_v2'
+            },
+            'ar-SA': { 
+                name: 'Árabe', 
+                voiceId: 'ErXwobaYiN019PkySvjV', // Antoni - Voz masculina árabe
+                model: 'eleven_turbo_v2'
+            }
         };
     }
 
@@ -141,7 +193,7 @@ class LiveTranslator {
                     }
                     this.pauseListeningAndTranslate(finalTranscript);
                 } else if (currentText.trim().length > 2) {
-                    // Para texto intermedio, respuesta más rápida
+                    // Para texto intermedio, respuesta ultra-rápida
                     if (this.silenceTimer) {
                         clearTimeout(this.silenceTimer);
                     }
@@ -149,7 +201,7 @@ class LiveTranslator {
                         if (!this.isSpeaking && currentText.trim()) {
                             this.pauseListeningAndTranslate(currentText);
                         }
-                    }, 500); // Reducido de 1000ms a 500ms
+                    }, 200); // Reducido a 200ms para respuesta inmediata
                 }
             }
         };
@@ -258,18 +310,18 @@ class LiveTranslator {
         this.isSpeaking = true;
         
         try {
-            // Usar solo voz del navegador para mejor compatibilidad y velocidad
-            await this.speakWithBrowser(translatedText);
+            // Usar ElevenLabs para voces ultra-realistas
+            await this.speakWithElevenLabs(translatedText);
         } catch (error) {
             console.error('Error al hablar:', error);
         }
         
-        // Reanudar escucha después de hablar
+        // Reanudar escucha inmediatamente después de hablar
         this.isSpeaking = false;
         this.isWaitingToSpeak = false;
         
         if (this.isRecording) {
-            setTimeout(() => this.restartRecognition(), 300); // Reducido de 1000ms a 300ms
+            setTimeout(() => this.restartRecognition(), 100); // Reducido a 100ms
         }
     }
 
@@ -283,77 +335,102 @@ class LiveTranslator {
 
     
 
-    async speakWithBrowser(text) {
-        return new Promise((resolve) => {
-            if ('speechSynthesis' in window) {
-                speechSynthesis.cancel();
+    async speakWithElevenLabs(text) {
+        return new Promise(async (resolve) => {
+            try {
+                const voiceConfig = this.languageConfig[this.currentTargetLanguage];
                 
-                // Esperar a que las voces estén disponibles
-                const speakText = () => {
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.lang = this.currentTargetLanguage;
-                    utterance.rate = 0.9; // Aumentado para mayor naturalidad
-                    utterance.pitch = 1.1; // Ligeramente más alto
-                    utterance.volume = 1.0; // Volumen máximo
-                    
-                    // Buscar la mejor voz para el idioma seleccionado
-                    const voices = speechSynthesis.getVoices();
-                    let targetVoice = voices.find(voice => 
-                        voice.lang === this.currentTargetLanguage
-                    );
-                    
-                    if (!targetVoice) {
-                        targetVoice = voices.find(voice => 
-                            voice.lang.startsWith(this.currentTargetLanguage.split('-')[0])
-                        );
-                    }
-                    
-                    // Preferir voces premium/mejoradas
-                    if (!targetVoice) {
-                        const premiumVoice = voices.find(voice => 
-                            voice.name.includes('Premium') || 
-                            voice.name.includes('Enhanced') ||
-                            voice.name.includes('Neural')
-                        );
-                        if (premiumVoice) targetVoice = premiumVoice;
-                    }
-                    
-                    if (targetVoice) {
-                        utterance.voice = targetVoice;
-                        console.log(`Usando voz: ${targetVoice.name} para ${this.currentTargetLanguage}`);
-                    } else {
-                        console.log(`Usando voz por defecto para ${this.currentTargetLanguage}`);
-                    }
-                    
-                    utterance.onstart = () => {
-                        console.log('Iniciando síntesis de voz');
-                    };
-                    
-                    utterance.onend = () => {
-                        console.log('Síntesis de voz completada');
-                        resolve();
-                    };
-                    
-                    utterance.onerror = (error) => {
-                        console.error('Error en síntesis de voz:', error);
-                        resolve();
-                    };
-                    
-                    speechSynthesis.speak(utterance);
-                };
-                
-                // Si no hay voces disponibles, esperar un poco
-                if (speechSynthesis.getVoices().length === 0) {
-                    speechSynthesis.onvoiceschanged = () => {
-                        speechSynthesis.onvoiceschanged = null;
-                        speakText();
-                    };
-                    // Timeout de seguridad
-                    setTimeout(speakText, 100);
-                } else {
-                    speakText();
+                if (!voiceConfig) {
+                    console.error('Configuración de voz no encontrada para:', this.currentTargetLanguage);
+                    resolve();
+                    return;
                 }
-            } else {
+
+                // Crear clave de cache única
+                const cacheKey = `${this.currentTargetLanguage}-${text.toLowerCase().trim()}`;
+                
+                // Verificar cache para evitar llamadas duplicadas
+                if (this.audioCache.has(cacheKey)) {
+                    console.log('Usando audio en cache');
+                    const cachedAudioUrl = this.audioCache.get(cacheKey);
+                    const audio = new Audio(cachedAudioUrl);
+                    
+                    audio.onended = () => resolve();
+                    audio.onerror = () => resolve();
+                    await audio.play();
+                    return;
+                }
+
+                // Evitar repetir la misma traducción
+                if (text === this.lastTranslation) {
+                    resolve();
+                    return;
+                }
+                this.lastTranslation = text;
+
+                console.log(`Usando ElevenLabs: ${voiceConfig.name} para decir: "${text}"`);
+
+                // Configuración optimizada para velocidad y economía
+                const requestData = {
+                    text: text,
+                    model_id: voiceConfig.model, // Usando turbo_v2 para mayor velocidad
+                    voice_settings: {
+                        stability: 0.5, // Reducido para mayor velocidad
+                        similarity_boost: 0.5, // Reducido para economizar créditos
+                        style: 0.3, // Reducido para procesamiento más rápido
+                        use_speaker_boost: false // Desactivado para ahorrar créditos
+                    },
+                    optimize_streaming_latency: 4, // Máxima optimización de latencia
+                    output_format: "mp3_22050_32" // Formato más liviano para velocidad
+                };
+
+                const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceConfig.voiceId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'audio/mpeg',
+                        'Content-Type': 'application/json',
+                        'xi-api-key': this.elevenLabsApiKey
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`ElevenLabs API error: ${response.status}`);
+                }
+
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                // Guardar en cache (limitar cache a 10 elementos)
+                if (this.audioCache.size >= 10) {
+                    const firstKey = this.audioCache.keys().next().value;
+                    const oldUrl = this.audioCache.get(firstKey);
+                    URL.revokeObjectURL(oldUrl);
+                    this.audioCache.delete(firstKey);
+                }
+                this.audioCache.set(cacheKey, audioUrl);
+                
+                const audio = new Audio(audioUrl);
+
+                audio.onended = () => {
+                    console.log('ElevenLabs TTS completado');
+                    resolve();
+                };
+
+                audio.onerror = (error) => {
+                    console.error('Error reproduciendo audio ElevenLabs:', error);
+                    resolve();
+                };
+
+                // Configurar para inicio inmediato
+                audio.preload = 'auto';
+                audio.load();
+
+                // Reproducir el audio
+                await audio.play();
+
+            } catch (error) {
+                console.error('Error con ElevenLabs TTS:', error);
                 resolve();
             }
         });
@@ -361,6 +438,12 @@ class LiveTranslator {
 
     async simpleTranslateToLanguage(text, targetLang) {
         const translations = {
+            'es-ES': {
+                'hello': 'hola', 'goodbye': 'adiós', 'thank you': 'gracias', 'please': 'por favor',
+                'yes': 'sí', 'no': 'no', 'good morning': 'buenos días', 'good night': 'buenas noches',
+                'how are you': 'cómo estás', 'very good': 'muy bien', 'good': 'bien', 'bad': 'mal',
+                'house': 'casa', 'water': 'agua', 'food': 'comida', 'family': 'familia'
+            },
             'zh-CN': {
                 'hola': '你好', 'adiós': '再见', 'gracias': '谢谢', 'por favor': '请',
                 'sí': '是', 'no': '不', 'buenos días': '早上好', 'buenas noches': '晚安',
@@ -432,8 +515,8 @@ class LiveTranslator {
             }
         }
         
-        const langName = this.languageConfig[targetLang]?.name || 'target language';
-        return `Traduciendo a ${langName}: ${text}`;
+        // Solo devolver el texto traducido, sin prefijos
+        return text;
     }
 
     initializeEventListeners() {
@@ -541,10 +624,12 @@ class LiveTranslator {
             clearTimeout(this.silenceTimer);
         }
         
-        // Cancelar síntesis de voz
-        if ('speechSynthesis' in window) {
-            speechSynthesis.cancel();
-        }
+        // Pausar cualquier audio de ElevenLabs que esté reproduciéndose
+        const audioElements = document.querySelectorAll('audio');
+        audioElements.forEach(audio => {
+            audio.pause();
+            audio.currentTime = 0;
+        });
         
         this.spanishText.textContent = 'Presiona el botón para comenzar...';
         this.englishText.textContent = `Traducirá a ${this.currentLanguageName}...`;
