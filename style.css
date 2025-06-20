@@ -58,46 +58,7 @@ body {
     max-width: 600px;
 }
 
-.sign-language-display {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 200px;
-    height: 150px;
-    background: rgba(0, 0, 0, 0.9);
-    border-radius: 15px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(10px);
-    z-index: 10;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-}
 
-.sign-language-title {
-    color: #fff;
-    font-size: 11px;
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-}
-
-#avatarCanvas {
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.1);
-    transition: all 0.3s ease;
-}
-
-.sign-language-word {
-    color: #4CAF50;
-    font-size: 12px;
-    margin-top: 5px;
-    font-weight: bold;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-}
 
 .language-selector {
     position: absolute;
@@ -107,27 +68,39 @@ body {
 }
 
 #targetLanguage {
-    background: rgba(0, 0, 0, 0.8);
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.9), rgba(56, 142, 60, 0.9));
     color: white;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 10px;
-    padding: 10px 15px;
-    font-size: 14px;
-    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-radius: 15px;
+    padding: 12px 18px;
+    font-size: 15px;
+    font-weight: 500;
+    backdrop-filter: blur(15px);
     cursor: pointer;
     transition: all 0.3s ease;
-    min-width: 180px;
+    min-width: 200px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 #targetLanguage:hover {
-    border-color: #4CAF50;
-    background: rgba(0, 0, 0, 0.9);
+    border-color: #ffffff;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 1), rgba(56, 142, 60, 1));
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+#targetLanguage:focus {
+    outline: none;
+    border-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
 }
 
 #targetLanguage option {
-    background: #1a1a1a;
+    background: #2c2c2c;
     color: white;
-    padding: 8px;
+    padding: 10px;
+    font-weight: 500;
 }
 
 .spanish-text {
