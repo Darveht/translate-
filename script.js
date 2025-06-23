@@ -69,68 +69,71 @@ class LiveTranslator {
 
     initializeLanguageSupport() {
         // ElevenLabs API configuration
-        this.elevenLabsApiKey = 'sk_90c2b196908f9793568de840b935fc94f542ed50abde7385';
+        this.elevenLabsApiKey = 'sk_8ef5b8c0a3f5743ee01671aaab8062a163b61508f4ba70f3';
 
         // Cache de audio para reducir llamadas a API
         this.audioCache = new Map();
         this.lastTranslation = '';
 
-        // Voces específicas y optimizadas por idioma para máxima naturalidad
+        // Verificar si la API key está correcta
+        console.log('ElevenLabs API Key configurada');
+
+        // Voces específicas y optimizadas por idioma
         this.languageConfig = {
             'es-ES': { 
                 name: 'Español', 
-                voiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - Voz femenina española
-                model: 'eleven_turbo_v2' // Modelo más rápido
+                voiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella (mujer, joven)
+                model: 'eleven_turbo_v2_5'
             },
             'en-US': { 
                 name: 'Inglés', 
-                voiceId: 'pNInz6obpgDQGcFmaJgB', // Adam - Voz masculina americana
-                model: 'eleven_turbo_v2'
+                voiceId: 'pNInz6obpgDQGcFmaJgB', // Adam (hombre, profundo)
+                model: 'eleven_turbo_v2_5'
             },
             'zh-CN': { 
                 name: 'Chino', 
-                voiceId: 'XB0fDUnXU5powFXDhCwa', // Charlotte - Voz femenina china
-                model: 'eleven_turbo_v2'
+                voiceId: '21m00Tcm4TlvDq8ikWAM', // Rachel (clara, multiidioma)
+                model: 'eleven_multilingual_v2'
             },
             'fr-FR': { 
                 name: 'Francés', 
-                voiceId: 'TX3LPaxmHKxFdv7VOQHJ', // Liam - Voz masculina francesa
-                model: 'eleven_turbo_v2'
+                voiceId: 'AZnzlk1XvdvUeBnXmlld', // Domi (cálida, francesa)
+                model: 'eleven_multilingual_v2'
             },
             'de-DE': { 
                 name: 'Alemán', 
-                voiceId: 'ErXwobaYiN019PkySvjV', // Antoni - Voz masculina alemana
-                model: 'eleven_turbo_v2'
+                voiceId: 'ErXwobaYiN019PkySvjV', // Antoni (masculina, alemana)
+                model: 'eleven_multilingual_v2'
             },
             'it-IT': { 
                 name: 'Italiano', 
-                voiceId: 'XB0fDUnXU5powFXDhCwa', // Charlotte - Voz femenina italiana
-                model: 'eleven_turbo_v2'
+                voiceId: 'MF3mGyEYCl7XYWbV9V6O', // Elli (femenina, italiana)
+                model: 'eleven_multilingual_v2'
             },
             'pt-BR': { 
                 name: 'Portugués', 
-                voiceId: 'onwK4e9ZLuTAKqWW03F9', // Daniel - Voz masculina brasileña
-                model: 'eleven_turbo_v2'
+                voiceId: 'TxGEqnHWrfWFTfGW9XjX', // Josh (masculina, brasileña)
+                model: 'eleven_multilingual_v2'
             },
             'ja-JP': { 
                 name: 'Japonés', 
-                voiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - Voz femenina japonesa
-                model: 'eleven_turbo_v2'
+                voiceId: '21m00Tcm4TlvDq8ikWAM', // Rachel (multiidioma)
+                model: 'eleven_multilingual_v2'
             },
             'ko-KR': { 
                 name: 'Coreano', 
-                voiceId: 'pNInz6obpgDQGcFmaJgB', // Adam - Voz masculina coreana
-                model: 'eleven_turbo_v2'
+                voiceId: '21m00Tcm4TlvDq8ikWAM', // Rachel (multiidioma)
+                model: 'eleven_multilingual_v2'
             },
             'ru-RU': { 
                 name: 'Ruso', 
-                voiceId: 'TX3LPaxmHKxFdv7VOQHJ', // Liam - Voz masculina rusa
-                model: 'eleven_turbo_v2'
+                voiceId: 'onwK4e9ZLuTAKqWW03F9', // Daniel (masculina, rusa)
+                model: 'eleven_multilingual_v2'
             },
             'ar-SA': { 
                 name: 'Árabe', 
-                voiceId: 'ErXwobaYiN019PkySvjV', // Antoni - Voz masculina árabe
-                model: 'eleven_turbo_v2'
+                voiceId: '21m00Tcm4TlvDq8ikWAM', // Rachel (multiidioma)
+                model: 'eleven_multilingual_v2'
             }
         };
     }
@@ -192,22 +195,22 @@ class LiveTranslator {
                         clearTimeout(this.silenceTimer);
                     }
                     this.pauseListeningAndTranslate(finalTranscript);
-                } else if (currentText.trim().length > 2) {
-                    // Para texto intermedio, esperar más tiempo para frases largas
+                } else if (currentText.trim().length > 1) {
+                    // Traducción ultra-rápida e instantánea
                 if (this.silenceTimer) {
                     clearTimeout(this.silenceTimer);
                 }
 
-                // Permitir frases más largas - esperar más tiempo según la longitud
-                const minWords = 5; // Mínimo 5 palabras
+                // Traducción instantánea con menos palabras requeridas
+                const minWords = 2; // Solo 2 palabras mínimas
                 const wordCount = currentText.trim().split(' ').length;
-                let waitTime = 2000; // 2 segundos base
+                let waitTime = 300; // 300ms base ultra-rápido
 
-                // Aumentar tiempo de espera para frases largas
+                // Tiempo de espera muy corto para traducción instantánea
                 if (wordCount >= minWords) {
-                    waitTime = Math.min(5000, 2000 + (wordCount * 100)); // Hasta 5 segundos máximo
+                    waitTime = Math.min(800, 300 + (wordCount * 20)); // Máximo 800ms
                 } else {
-                    waitTime = 3000; // 3 segundos para frases cortas
+                    waitTime = 500; // 500ms para frases cortas
                 }
 
                 this.silenceTimer = setTimeout(() => {
@@ -334,7 +337,7 @@ class LiveTranslator {
         this.isWaitingToSpeak = false;
 
         if (this.isRecording) {
-            setTimeout(() => this.restartRecognition(), 100); // Reducido a 100ms
+            setTimeout(() => this.restartRecognition(), 50); // Ultra-rápido: 50ms
         }
     }
 
@@ -355,6 +358,8 @@ class LiveTranslator {
 
                 if (!voiceConfig) {
                     console.error('Configuración de voz no encontrada para:', this.currentTargetLanguage);
+                    // Usar fallback de navegador
+                    this.speakWithBrowserTTS(text);
                     resolve();
                     return;
                 }
@@ -369,8 +374,19 @@ class LiveTranslator {
                     const audio = new Audio(cachedAudioUrl);
 
                     audio.onended = () => resolve();
-                    audio.onerror = () => resolve();
-                    await audio.play();
+                    audio.onerror = () => {
+                        console.log('Error en cache, usando fallback');
+                        this.speakWithBrowserTTS(text);
+                        resolve();
+                    };
+                    
+                    try {
+                        await audio.play();
+                    } catch (playError) {
+                        console.log('Error reproduciendo cache, usando fallback');
+                        this.speakWithBrowserTTS(text);
+                        resolve();
+                    }
                     return;
                 }
 
@@ -383,19 +399,21 @@ class LiveTranslator {
 
                 console.log(`Usando ElevenLabs: ${voiceConfig.name} para decir: "${text}"`);
 
-                // Configuración optimizada para velocidad y economía
+                // Configuración optimizada para latencia mínima
                 const requestData = {
                     text: text,
-                    model_id: voiceConfig.model, // Usando turbo_v2 para mayor velocidad
+                    model_id: voiceConfig.model,
                     voice_settings: {
-                        stability: 0.5, // Reducido para mayor velocidad
-                        similarity_boost: 0.5, // Reducido para economizar créditos
-                        style: 0.3, // Reducido para procesamiento más rápido
-                        use_speaker_boost: false // Desactivado para ahorrar créditos
+                        stability: 0.5, // Reducido para velocidad
+                        similarity_boost: 0.7, // Reducido para velocidad
+                        style: 0.3, // Reducido para velocidad
+                        use_speaker_boost: true
                     },
-                    optimize_streaming_latency: 4, // Máxima optimización de latencia
-                    output_format: "mp3_22050_32" // Formato más liviano para velocidad
+                    optimize_streaming_latency: 4, // Máxima optimización
+                    output_format: "mp3_22050_64" // Formato más liviano para velocidad
                 };
+
+                console.log('Enviando solicitud a ElevenLabs...');
 
                 const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceConfig.voiceId}`, {
                     method: 'POST',
@@ -407,14 +425,30 @@ class LiveTranslator {
                     body: JSON.stringify(requestData)
                 });
 
+                console.log('Respuesta de ElevenLabs:', response.status, response.statusText);
+
                 if (!response.ok) {
-                    throw new Error(`ElevenLabs API error: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error(`ElevenLabs API error: ${response.status} - ${errorText}`);
+                    // Usar fallback del navegador
+                    this.speakWithBrowserTTS(text);
+                    resolve();
+                    return;
                 }
 
                 const audioBlob = await response.blob();
+                console.log('Audio blob recibido, tamaño:', audioBlob.size);
+
+                if (audioBlob.size === 0) {
+                    console.error('Audio blob vacío');
+                    this.speakWithBrowserTTS(text);
+                    resolve();
+                    return;
+                }
+
                 const audioUrl = URL.createObjectURL(audioBlob);
 
-                // Guardar en cache (limitar cache a 10 elementos)
+                // Guardar en cache
                 if (this.audioCache.size >= 10) {
                     const firstKey = this.audioCache.keys().next().value;
                     const oldUrl = this.audioCache.get(firstKey);
@@ -424,29 +458,70 @@ class LiveTranslator {
                 this.audioCache.set(cacheKey, audioUrl);
 
                 const audio = new Audio(audioUrl);
+                audio.volume = 1.0;
+                audio.preload = 'auto'; // Precargar inmediatamente
+                
+                // Configurar para reproducción instantánea
+                audio.onloadeddata = async () => {
+                    try {
+                        await audio.play(); // Reproducir apenas esté listo
+                        console.log('Reproduciendo audio de ElevenLabs instantáneamente...');
+                    } catch (playError) {
+                        console.error('Error al reproducir audio:', playError);
+                        this.speakWithBrowserTTS(text);
+                        resolve();
+                    }
+                };
 
                 audio.onended = () => {
-                    console.log('ElevenLabs TTS completado');
+                    console.log('ElevenLabs TTS completado exitosamente');
                     resolve();
                 };
 
                 audio.onerror = (error) => {
                     console.error('Error reproduciendo audio ElevenLabs:', error);
+                    this.speakWithBrowserTTS(text);
                     resolve();
                 };
 
-                // Configurar para inicio inmediato
-                audio.preload = 'auto';
+                // Iniciar carga inmediata
                 audio.load();
 
-                // Reproducir el audio
-                await audio.play();
-
             } catch (error) {
-                console.error('Error con ElevenLabs TTS:', error);
+                console.error('Error general con ElevenLabs TTS:', error);
+                this.speakWithBrowserTTS(text);
                 resolve();
             }
         });
+    }
+
+    speakWithBrowserTTS(text) {
+        console.log('Usando TTS del navegador como fallback');
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            // Configurar idioma
+            const langMap = {
+                'es-ES': 'es-ES',
+                'en-US': 'en-US',
+                'zh-CN': 'zh-CN',
+                'fr-FR': 'fr-FR',
+                'de-DE': 'de-DE',
+                'it-IT': 'it-IT',
+                'pt-BR': 'pt-BR',
+                'ja-JP': 'ja-JP',
+                'ko-KR': 'ko-KR',
+                'ru-RU': 'ru-RU',
+                'ar-SA': 'ar-SA'
+            };
+            
+            utterance.lang = langMap[this.currentTargetLanguage] || 'en-US';
+            utterance.rate = 0.9;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            
+            speechSynthesis.speak(utterance);
+        }
     }
 
     async simpleTranslateToLanguage(text, targetLang) {
